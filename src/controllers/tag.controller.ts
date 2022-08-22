@@ -1,10 +1,10 @@
-const db = require("../models");
+import db from "../db";
 const Tag = db.tag;
 const Document = db.document;
 const Gathering = db.gathering;
 const Op = db.Sequelize.Op;
 
-exports.create = (req, res) => {
+async function create(req, res) {
   // Validate request
   if (!req.body.title) {
     res.status(400).send({
@@ -19,6 +19,7 @@ exports.create = (req, res) => {
     count: req.body.count,
     // documentId: req.body.documentId
   };
+  const documentId = req.query.documentId;
   // Save Tag in the database
   Tag.findByPk(newTag.id)
     .then((tag) => {
@@ -35,7 +36,7 @@ exports.create = (req, res) => {
             });
           });
       }
-      Document.findByPk(req.body.documentId).then((document) => {
+      Document.findByPk(documentId).then((document) => {
         if (!document) {
           console.log("Document not found!");
           return null;
@@ -51,9 +52,9 @@ exports.create = (req, res) => {
         message: err.message || "Some error occurred while creating the Tag.",
       });
     });
-};
+}
 
-exports.findByDocumentId = (req, res) => {
+async function findByDocumentId(req, res) {
   const documentId = req.query.documentId;
   Document.findByPk(documentId, {
     include: [
@@ -70,16 +71,16 @@ exports.findByDocumentId = (req, res) => {
     ],
   })
     .then((data) => {
-      res.send(data);
+      res.send(data.tag);
     })
     .catch((err) => {
       res.status(500).send({
         message: err.message || "Some error occurred while retrieving Tag.",
       });
     });
-};
+}
 
-exports.findByGatheringId = (req, res) => {
+async function findByGatheringId(req, res) {
   const gatheringId = req.query.gatheringId;
   var condition = gatheringId ? { gatheringId: `${gatheringId}` } : null;
   Document.findAll({
@@ -95,7 +96,13 @@ exports.findByGatheringId = (req, res) => {
     limit: 10,
   })
     .then((data) => {
-      res.send(data);
+      let tagResult = []
+      data.forEach(element => {
+        if (!tagResult.includes(element.tag)) {
+          tagResult.push(element.tag)
+        }
+      });
+      res.send(tagResult);
     })
     .catch((err) => {
       res.status(500).send({
@@ -103,4 +110,10 @@ exports.findByGatheringId = (req, res) => {
           err.message || "Some error occurred while retrieving Document.",
       });
     });
+}
+
+module.exports = {
+  create,
+  findByDocumentId,
+  findByGatheringId,
 };
